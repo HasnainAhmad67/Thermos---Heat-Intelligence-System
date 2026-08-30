@@ -136,7 +136,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       <header className="dashboard__header">
-        <h1>🔥 THERMOS — Heat Intelligence MVP</h1>
+        <h1>🔥THERMOS — Heat Risk Intelligence Platform </h1>
 
         <button
           onClick={loadData}
