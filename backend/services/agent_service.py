@@ -1,0 +1,66 @@
+from google import genai
+from config import settings
+from schemas.models import AgentQuery, AgentResponse, Asset, RiskScore, PriorityItem
+
+_client = genai.Client(api_key=settings.gemini_api_key) if settings.gemini_api_key else None
+
+SYSTEM_PROMPT = """You are THERMOS Decision Agent, a professional heat-response intelligence assistant for one facility.
+
+You explain and recommend based ONLY on the structured data given to you below.
+You must NEVER invent temperatures, risk scores, costs, or outcomes not present in the data.
+
+FORMATTING RULES (always follow):
+- Use short paragraphs, never one long block of text.
+- Use markdown: **bold** for key terms, bullet points for lists, numbered steps for actions.
+- If comparing zones, use a short bulleted list, one zone per line.
+- Keep answers under 120 words unless the user asks for a detailed report.
+
+SCOPE RULES:
+- You only know about this facility's assets, risk scores, and priorities — nothing else.
+- If asked about anything outside this facility (other cities, general chit-chat, unrelated topics),
+  reply briefly and redirect: state plainly that it's outside your scope, then offer to help with
+  facility risk instead. Do not just say "the data doesn't contain X" — be conversational but firm.
+"""
+
+
+def _build_context(assets: list[Asset], risks: list[RiskScore], priorities: list[PriorityItem]) -> str:
+    lines = ["ASSETS AND CURRENT RISK:"]
+    risk_by_id = {r.asset_id: r for r in risks}
+    priority_by_id = {p.asset_id: p for p in priorities}
+
+    for asset in assets:
+        risk = risk_by_id.get(asset.id)
+        priority = priority_by_id.get(asset.id)
+        if not risk or not priority:
+            continue
+        lines.append(
+            f"- {asset.name} (id: {asset.id}): risk {risk.score}/100 ({risk.level}), "
+            f"priority rank #{priority.rank}, top drivers: "
+            f"hazard {risk.drivers.hazard}, exposure {risk.drivers.exposure}, "
+            f"vulnerability {risk.drivers.vulnerability}, persistence {risk.drivers.persistence}."
+        )
+    return "\n".join(lines)
+
+
+def ask_agent(
+    query: AgentQuery, assets: list[Asset], risks: list[RiskScore], priorities: list[PriorityItem]
+) -> AgentResponse:
+    if _client is None:
+        return AgentResponse(
+            answer="AI agent is not configured (missing GEMINI_API_KEY). "
+                   "Numerical risk and priority data above is still fully computed and reliable.",
+            grounded_on=[a.id for a in assets],
+        )
+
+    context = _build_context(assets, risks, priorities)
+    user_message = f"{context}\n\nQuestion: {query.question}"
+
+    response = _client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=f"{SYSTEM_PROMPT}\n\n{user_message}",
+    )
+
+    return AgentResponse(
+        answer=response.text,
+        grounded_on=[a.id for a in assets],
+    )

@@ -1,0 +1,11 @@
+{
+  "id": "dallas-dc-01",
+  "name": "Dallas Distribution Center",
+  "location": {
+    "city": "Dallas",
+    "state": "Texas",
+    "country": "USA",
+    "lat": 32.7767,
+    "lng": -96.7970
+  }
+}

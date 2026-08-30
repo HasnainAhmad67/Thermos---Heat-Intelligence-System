@@ -1,0 +1,29 @@
+[
+  {
+    "id": "warehouse-01",
+    "name": "Warehouse",
+    "type": "warehouse",
+    "lat": 32.7767,
+    "lng": -96.7970,
+    "criticality": 0.9,
+    "description": "Main storage warehouse for temperature-sensitive goods."
+  },
+  {
+    "id": "loading-dock-01",
+    "name": "Loading Dock",
+    "type": "loading_dock",
+    "lat": 32.7782,
+    "lng": -96.7948,
+    "criticality": 0.75,
+    "description": "Primary loading/unloading dock, high foot and vehicle traffic."
+  },
+  {
+    "id": "outdoor-yard-01",
+    "name": "Outdoor Storage Yard",
+    "type": "outdoor_yard",
+    "lat": 32.7748,
+    "lng": -96.7992,
+    "criticality": 0.6,
+    "description": "Open-air storage yard, fully sun-exposed, no shade cover."
+  }
+]
