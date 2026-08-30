@@ -3,6 +3,9 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 
 import httpx
+import asyncio
+
+_fortyguard_lock = asyncio.Semaphore(1)
 
 from config import settings
 from schemas.models import Asset, HeatReading
@@ -69,21 +72,10 @@ def _small_polygon_around(
     }
 
 
-async def _submit_heatmap(
-    lat: float,
-    lng: float,
-    start_date: str,
-    start_time: str,
-    delta: float = 0.002,
-) -> str:
-    """Submits a heatmap request and returns the activity_id."""
-
+async def _submit_heatmap(lat: float, lng: float, start_date: str, start_time: str, delta: float = 0.002) -> str:
+    """Submits a heatmap request, returns the activity_id. Serialized globally to respect plan limits."""
     payload = {
-        "polygon_aoi": _small_polygon_around(
-            lat,
-            lng,
-            delta,
-        ),
+        "polygon_aoi": _small_polygon_around(lat, lng, delta),
         "date_time": {
             "start_date": start_date,
             "start_time": start_time,
@@ -92,34 +84,21 @@ async def _submit_heatmap(
         "granularity": 100,
     }
 
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.post(
-                f"{BASE_URL}/heatmap",
-                headers=_headers(),
-                json=payload,
-            )
+    async with _fortyguard_lock:
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(f"{BASE_URL}/heatmap", headers=_headers(), json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+        except (httpx.HTTPError, httpx.TimeoutException) as exc:
+            raise FortyGuardUnavailableError(f"FortyGuard heatmap submission failed: {exc}") from exc
 
-            resp.raise_for_status()
-            data = resp.json()
-
-    except httpx.TimeoutException as exc:
-        raise FortyGuardUnavailableError(
-            f"FortyGuard heatmap submission timed out: {exc}"
-        ) from exc
-
-    except httpx.HTTPError as exc:
-        raise FortyGuardUnavailableError(
-            f"FortyGuard heatmap submission failed: {exc}"
-        ) from exc
+        # Small buffer after submission before releasing the lock for the next caller.
+        await asyncio.sleep(1.0)
 
     activity_id = data.get("data", {}).get("activity_id")
-
     if not activity_id:
-        raise FortyGuardUnavailableError(
-            "FortyGuard did not return an activity_id."
-        )
-
+        raise FortyGuardUnavailableError("FortyGuard did not return an activity_id.")
     return activity_id
 
 

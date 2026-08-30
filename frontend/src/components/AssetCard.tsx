@@ -23,6 +23,13 @@ const DRIVER_LABELS: Record<string, string> = {
   response_gap: "Response Gap",
 };
 
+const DATA_STATE_LABELS: Record<string, string> = {
+  RECENT_OBSERVED: "Based on recent FortyGuard data",
+  MODELED: "Modeled estimate",
+  SIMULATED: "Simulated",
+  DEMO: "Demo data",
+};
+
 export default function AssetCard({ asset, risk, isSelected, onSelect }: Props) {
   const [showWhy, setShowWhy] = useState(false);
 
@@ -42,20 +49,25 @@ export default function AssetCard({ asset, risk, isSelected, onSelect }: Props) 
       <p className="asset-card__desc">{asset.description}</p>
 
       {risk ? (
-        <div className="asset-card__score-row">
-          <div className="asset-card__score">
-            Risk score: <strong>{risk.score}</strong> / 100
+        <>
+          <div className="asset-card__score-row">
+            <div className="asset-card__score">
+              Risk score: <strong>{risk.score}</strong> / 100
+            </div>
+            <button
+              className="asset-card__why-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowWhy(!showWhy);
+              }}
+            >
+              {showWhy ? "Hide" : "Why?"}
+            </button>
           </div>
-          <button
-            className="asset-card__why-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowWhy(!showWhy);
-            }}
-          >
-            {showWhy ? "Hide" : "Why?"}
-          </button>
-        </div>
+          <div className="asset-card__provenance" title={DATA_STATE_LABELS[risk.data_state]}>
+            ⓘ {DATA_STATE_LABELS[risk.data_state] ?? risk.data_state}
+          </div>
+        </>
       ) : (
         <div className="asset-card__score">Loading risk…</div>
       )}
@@ -68,10 +80,7 @@ export default function AssetCard({ asset, risk, isSelected, onSelect }: Props) 
               <div key={key} className="asset-card__driver-row">
                 <span className="asset-card__driver-label">{DRIVER_LABELS[key] ?? key}</span>
                 <div className="asset-card__driver-bar-track">
-                  <div
-                    className="asset-card__driver-bar-fill"
-                    style={{ width: `${value}%` }}
-                  />
+                  <div className="asset-card__driver-bar-fill" style={{ width: `${value}%` }} />
                 </div>
                 <span className="asset-card__driver-value">{value}</span>
               </div>

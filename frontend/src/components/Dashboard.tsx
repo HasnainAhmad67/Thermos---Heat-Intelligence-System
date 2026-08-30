@@ -9,6 +9,7 @@ import type {
   OverallRisk,
 } from "../types";
 
+import AnalysisLoadingOverlay from "./AnalysisLoadingOverlay";
 import AssetCard from "./AssetCard";
 import HeatPanel from "./HeatPanel";
 import RiskPriorityPanel from "./RiskPriorityPanel";
@@ -25,9 +26,7 @@ export default function Dashboard() {
 
   // Keep null on initial dashboard load.
   // Heat/forecast data will load only after the user selects an asset.
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(
-    null
-  );
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +68,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData();
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -89,14 +87,7 @@ export default function Dashboard() {
       // User will select an asset from the new facility.
       setSelectedAssetId(null);
 
-      await api.selectFacility(
-        lat,
-        lng,
-        name,
-        city,
-        state,
-        country
-      );
+      await api.selectFacility(lat, lng, name, city, state, country);
 
       await loadData();
 
@@ -130,18 +121,32 @@ export default function Dashboard() {
     risks.map((risk) => [risk.asset_id, risk])
   );
 
-  const isCustomFacility =
-    !!facility && facility.id !== "dallas-dc-01";
+  // Show the loading overlay only during the first dashboard load.
+  // Once a facility has loaded, Refresh will keep the dashboard visible.
+  if (loading && !facility) {
+    return (
+      <div className="dashboard">
+        <header className="dashboard__header">
+          <h1>🔥 THERMOS — Heat Intelligence</h1>
+        </header>
+        <AnalysisLoadingOverlay />
+      </div>
+    );
+  }
+
+  const isCustomFacility = !!facility && facility.id !== "dallas-dc-01";
 
   return (
     <div className="dashboard">
       <header className="dashboard__header">
-        <h1>🔥THERMOS — Heat Risk Intelligence Platform </h1>
+        <h1>
+          <span style={{ color: "var(--accent)" }}>◆</span> THERMOS{" "}
+          <span className="muted" style={{ fontWeight: 400, fontSize: 15 }}>
+            Heat Intelligence
+          </span>
+        </h1>
 
-        <button
-          onClick={loadData}
-          disabled={loading}
-        >
+        <button onClick={loadData} disabled={loading}>
           {loading ? "Refreshing…" : "Refresh"}
         </button>
       </header>
@@ -166,11 +171,7 @@ export default function Dashboard() {
         />
       )}
 
-      {error && (
-        <p className="error-text">
-          {error}
-        </p>
-      )}
+      {error && <p className="error-text">{error}</p>}
 
       <section className="asset-grid">
         {assets.map((asset) => (
@@ -185,9 +186,7 @@ export default function Dashboard() {
       </section>
 
       <section className="dashboard__grid">
-        <HeatPanel
-          assetId={selectedAssetId}
-        />
+        <HeatPanel assetId={selectedAssetId} />
 
         <RiskPriorityPanel
           priorities={priorities}
@@ -195,25 +194,17 @@ export default function Dashboard() {
           onSelect={setSelectedAssetId}
         />
 
-        <ScenarioSimulator
-          assetId={selectedAssetId}
-        />
+        <ScenarioSimulator assetId={selectedAssetId} />
 
-        <AgentChat
-          selectedAssetId={selectedAssetId}
-        />
+        <AgentChat selectedAssetId={selectedAssetId} />
       </section>
 
       <LocationMap
         isOpen={mapOpen}
         onClose={() => setMapOpen(false)}
         onConfirm={handleSelectLocation}
-        currentLat={
-          facility?.location.lat ?? 32.7767
-        }
-        currentLng={
-          facility?.location.lng ?? -96.797
-        }
+        currentLat={facility?.location.lat ?? 32.7767}
+        currentLng={facility?.location.lng ?? -96.797}
         switching={switching}
         switchError={switchError}
       />

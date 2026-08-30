@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
+import AnalysisLoadingOverlay from "./AnalysisLoadingOverlay";
 
 // Fix default marker icon paths (known Vite/Leaflet bundling issue)
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -154,6 +155,7 @@ export default function LocationMap({
         </p>
 
         {switchError && <p className="error-text">{switchError}</p>}
+        {switching && <AnalysisLoadingOverlay />}
 
         <div className="map-modal__footer">
           {picked && <span className="map-modal__picked">📍 {picked.label}</span>}

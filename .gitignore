@@ -1,0 +1,6 @@
+backend/.env
+frontend/.env
+.env
+__pycache__/
+*.pyc
+*.tsbuildinfo
